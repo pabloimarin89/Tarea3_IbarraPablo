@@ -1,0 +1,132 @@
+---
+---
+title: "Tarea 3 - Herramientas de Ciencia de Datos I"
+author: "Pablo Ibarra Marin"
+format: html
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+```{r}
+
+#| label: preparacion
+#| include: false
+
+# Cargar las funciones
+source("cod/funciones_tarea3.R")
+
+# Cargar la base
+datos <- read.csv(
+  "data/transacciones_2025.csv",
+  sep = ";",
+  stringsAsFactors = FALSE
+)
+
+# Leer los parametros
+parametros <- read.csv(
+  "config/parametros_tarea3.csv",
+  sep = ";",
+  stringsAsFactors = FALSE
+)
+
+# Extraer los parametros del ejercicio 1
+ventana <- as.integer(
+  parametros$valor[parametros$parametro == "ventana"]
+)
+
+k.alerta <- as.numeric(
+  parametros$valor[parametros$parametro == "k.alerta"]
+)
+
+```
+
+## Ejercicio 1 - Alertas por ventana movil
+
+Se analiza el numero diario de transacciones utilizando una ventana movil y un umbral basado en la desviacion estandar muestral.
+
+```{r}
+#| label: resultados-ej1
+
+# Resultados con parametros personalizados
+resultado.ej1 <- alerta.movil(datos, ventana, k.alerta)
+
+# 1A: Numero de dias con alerta
+resultado.1a <- sum(resultado.ej1$alerta, na.rm = TRUE)
+
+# 1B: Primera fecha con alerta
+resultado.1b <- min(
+  resultado.ej1$fecha[which(resultado.ej1$alerta)]
+)
+
+# 1C: Parametros comunes
+resultado.comun <- alerta.movil(datos, 7, 2)
+
+resultado.1c <- sum(
+  resultado.comun$alerta,
+  na.rm = TRUE
+)
+
+# Mostrar resultados
+cat("RESULTADO_1A =", resultado.1a, "\n")
+cat("RESULTADO_1B =", format(resultado.1b, "%Y-%m-%d"), "\n")
+cat("RESULTADO_1C =", resultado.1c, "\n")
+```
+
+```{r}
+
+#| label: grafico-ej1
+#| echo: false
+#| fig-width: 10
+#| fig-height: 5
+
+library(ggplot2)
+
+# Paso 1: Crear el grafico
+grafico.ej1 <- ggplot(
+  data = resultado.ej1,
+  mapping = aes(x = fecha, y = n.tx)
+) +
+  
+  # Paso 2: Dibujar las transacciones diarias
+  geom_line(
+    color = "gray45",
+    linewidth = 0.5
+  ) +
+  
+  # Paso 3: Resaltar los dias con alerta
+  geom_point(
+    data = subset(resultado.ej1, alerta %in% TRUE),
+    color = "red",
+    size = 1.8
+  ) +
+  
+  # Paso 4: Agregar titulos y etiquetas
+  labs(
+    title = "Alertas por volumen de transacciones - 2025",
+    subtitle = paste(
+      "Ventana:", ventana,
+      "dias | Factor k:", k.alerta,
+      "| Total de alertas:", resultado.1a
+    ),
+    x = "Fecha",
+    y = "Numero diario de transacciones",
+    caption = "Puntos rojos: dias con alerta"
+  ) +
+  
+  # Paso 5: Aplicar formato visual
+  theme_minimal()
+
+# Paso 6: Guardar el grafico en formato PNG
+ggsave(
+  filename = "info/figuras/alertas_ej1.png",
+  plot = grafico.ej1,
+  width = 10,
+  height = 5,
+  dpi = 150
+)
+
+# Paso 7: Mostrar el grafico en el reporte
+grafico.ej1
+```
