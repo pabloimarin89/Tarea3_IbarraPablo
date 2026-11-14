@@ -198,3 +198,98 @@ Se compara la distribución observada del primer dígito de los montos con la di
 ```{r}
 
 ```
+
+```{r}
+
+#| label: grafico-ej2
+#| echo: false
+#| fig-width: 9
+#| fig-height: 5
+
+library(ggplot2)
+
+# Paso 1: Seleccionar montos positivos del canal personalizado
+montos.benford <- datos$monto_crc[
+  datos$canal == canal.benford &
+    !is.na(datos$monto_crc) &
+    is.finite(datos$monto_crc) &
+    datos$monto_crc > 0
+]
+
+# Paso 2: Extraer el primer digito
+digitos <- floor(
+  montos.benford /
+    (10 ^ floor(log10(montos.benford)))
+)
+
+# Paso 3: Calcular las proporciones observadas
+frecuencias <- table(factor(digitos, levels = 1:9))
+
+p.observada <- as.numeric(frecuencias) /
+  sum(frecuencias)
+
+# Paso 4: Calcular las proporciones teoricas de Benford
+p.teorica <- log10(1 + 1 / (1:9))
+
+# Paso 5: Construir la tabla para el grafico
+tabla.digitos <- data.frame(
+  digito = 1:9,
+  observada = p.observada,
+  teorica = p.teorica
+)
+
+# Paso 6: Crear el grafico
+grafico.ej2 <- ggplot(tabla.digitos, aes(x = digito)) +
+  
+  geom_col(
+    aes(y = observada),
+    fill = "steelblue",
+    width = 0.7
+  ) +
+  
+  geom_line(
+    aes(y = teorica),
+    color = "red",
+    linewidth = 1
+  ) +
+  
+  geom_point(
+    aes(y = teorica),
+    color = "red",
+    size = 2
+  ) +
+  
+  scale_x_continuous(breaks = 1:9) +
+  
+  scale_y_continuous(
+    labels = function(x) paste0(round(x * 100), "%")
+  ) +
+  
+  labs(
+    title = "Distribucion del primer digito - Ley de Benford",
+    subtitle = paste(
+      "Canal:", canal.benford,
+      "| MAD:", sprintf("%.4f", resultado.2a)
+    ),
+    x = "Primer digito",
+    y = "Proporcion de transacciones",
+    caption = "Barras: proporcion observada | Linea roja: Benford"
+  ) +
+  
+  theme_minimal()
+
+# Paso 7: Guardar el grafico
+ggsave(
+  filename = "info/figuras/benford_ej2.png",
+  plot = grafico.ej2,
+  width = 9,
+  height = 5,
+  dpi = 150
+)
+
+# Paso 8: Mostrar el grafico en Quarto
+grafico.ej2
+
+```
+
+**Conclusión:** El canal Web presenta conformidad cercana con la ley de Benford (MAD = 0,0023). Los cantones con mayor MAD tienen relativamente pocas transacciones, por lo que las desviaciones podrían deberse a variabilidad muestral y no constituyen evidencia suficiente de fraude.
