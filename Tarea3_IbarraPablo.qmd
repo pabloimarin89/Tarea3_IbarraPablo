@@ -1,5 +1,4 @@
 ---
----
 title: "Tarea 3 - Herramientas de Ciencia de Datos I"
 author: "Pablo Ibarra Marin"
 format: html
@@ -10,7 +9,6 @@ execute:
 ---
 
 ```{r}
-
 #| label: preparacion
 #| include: false
 
@@ -40,14 +38,16 @@ k.alerta <- as.numeric(
   parametros$valor[parametros$parametro == "k.alerta"]
 )
 
+# Extraer el parametro del ejercicio 2
+canal.benford <- parametros$valor[
+  parametros$parametro == "canal.benford"
+]
+
 ```
-
-## Ejercicio 1 - Alertas por ventana movil
-
-Se analiza el numero diario de transacciones utilizando una ventana movil y un umbral basado en la desviacion estandar muestral.
 
 ```{r}
 #| label: resultados-ej1
+#| include: false
 
 # Resultados con parametros personalizados
 resultado.ej1 <- alerta.movil(datos, ventana, k.alerta)
@@ -75,7 +75,67 @@ cat("RESULTADO_1C =", resultado.1c, "\n")
 ```
 
 ```{r}
+#| label: resultados-ej2
+#| include: false
 
+# Cargar el catalogo de cantones
+cantones <- read.csv(
+  "data/cantones.csv",
+  fileEncoding = "UTF-8"
+)
+
+# Calcular la MAD por canton
+tabla.benford <- benford.canton(
+  df = datos,
+  canal = canal.benford,
+  cantones = cantones
+)
+
+# 2A: MAD de todas las transacciones del canal
+resultado.2a <- benford.mad(
+  datos$monto_crc[datos$canal == canal.benford]
+)
+
+# 2B: Canton con mayor MAD
+resultado.2b <- tabla.benford$canton[1]
+
+# 2C: Numero de cantones con MAD superior a 0.015
+resultado.2c <- sum(tabla.benford$mad > 0.015)
+
+# 2D: Canton con mayor MAD del canal Web (comun)
+tabla.web <- benford.canton(datos, "Web", cantones)
+resultado.2d <- tabla.web$canton[1]
+
+# Mostrar los resultados
+cat("RESULTADO_2A =", sprintf("%.4f", resultado.2a), "\n")
+cat("RESULTADO_2B =", resultado.2b, "\n")
+cat("RESULTADO_2C =", resultado.2c, "\n")
+cat("RESULTADO_2D =", resultado.2d, "\n")
+
+```
+
+## Hoja de respuestas
+
+```{r}
+#| label: hoja-respuestas
+#| echo: false
+
+cat("RESULTADO_1A =", resultado.1a, "\n")
+cat("RESULTADO_1B =", format(resultado.1b, "%Y-%m-%d"), "\n")
+cat("RESULTADO_1C =", resultado.1c, "\n")
+
+cat("RESULTADO_2A =", sprintf("%.4f", resultado.2a), "\n")
+cat("RESULTADO_2B =", resultado.2b, "\n")
+cat("RESULTADO_2C =", resultado.2c, "\n")
+cat("RESULTADO_2D =", resultado.2d, "\n")
+
+```
+
+## Ejercicio 1 - Alertas por ventana movil
+
+Se analiza el numero diario de transacciones utilizando una ventana movil y un umbral basado en la desviacion estandar muestral.
+
+```{r}
 #| label: grafico-ej1
 #| echo: false
 #| fig-width: 10
@@ -130,3 +190,106 @@ ggsave(
 # Paso 7: Mostrar el grafico en el reporte
 grafico.ej1
 ```
+
+## Ejercicio 2 - Ley de Benford por cantón
+
+Se compara la distribución observada del primer dígito de los montos con la distribución teórica de Benford, tanto para el canal completo como por cantón.
+
+```{r}
+
+```
+
+```{r}
+
+#| label: grafico-ej2
+#| echo: false
+#| fig-width: 9
+#| fig-height: 5
+
+library(ggplot2)
+
+# Paso 1: Seleccionar montos positivos del canal personalizado
+montos.benford <- datos$monto_crc[
+  datos$canal == canal.benford &
+    !is.na(datos$monto_crc) &
+    is.finite(datos$monto_crc) &
+    datos$monto_crc > 0
+]
+
+# Paso 2: Extraer el primer digito
+digitos <- floor(
+  montos.benford /
+    (10 ^ floor(log10(montos.benford)))
+)
+
+# Paso 3: Calcular las proporciones observadas
+frecuencias <- table(factor(digitos, levels = 1:9))
+
+p.observada <- as.numeric(frecuencias) /
+  sum(frecuencias)
+
+# Paso 4: Calcular las proporciones teoricas de Benford
+p.teorica <- log10(1 + 1 / (1:9))
+
+# Paso 5: Construir la tabla para el grafico
+tabla.digitos <- data.frame(
+  digito = 1:9,
+  observada = p.observada,
+  teorica = p.teorica
+)
+
+# Paso 6: Crear el grafico
+grafico.ej2 <- ggplot(tabla.digitos, aes(x = digito)) +
+  
+  geom_col(
+    aes(y = observada),
+    fill = "steelblue",
+    width = 0.7
+  ) +
+  
+  geom_line(
+    aes(y = teorica),
+    color = "red",
+    linewidth = 1
+  ) +
+  
+  geom_point(
+    aes(y = teorica),
+    color = "red",
+    size = 2
+  ) +
+  
+  scale_x_continuous(breaks = 1:9) +
+  
+  scale_y_continuous(
+    labels = function(x) paste0(round(x * 100), "%")
+  ) +
+  
+  labs(
+    title = "Distribucion del primer digito - Ley de Benford",
+    subtitle = paste(
+      "Canal:", canal.benford,
+      "| MAD:", sprintf("%.4f", resultado.2a)
+    ),
+    x = "Primer digito",
+    y = "Proporcion de transacciones",
+    caption = "Barras: proporcion observada | Linea roja: Benford"
+  ) +
+  
+  theme_minimal()
+
+# Paso 7: Guardar el grafico
+ggsave(
+  filename = "info/figuras/benford_ej2.png",
+  plot = grafico.ej2,
+  width = 9,
+  height = 5,
+  dpi = 150
+)
+
+# Paso 8: Mostrar el grafico en Quarto
+grafico.ej2
+
+```
+
+**Conclusión:** El canal Web presenta conformidad cercana con la ley de Benford (MAD = 0,0023). Los cantones con mayor MAD tienen relativamente pocas transacciones, por lo que las desviaciones podrían deberse a variabilidad muestral y no constituyen evidencia suficiente de fraude.

@@ -58,3 +58,86 @@ alerta.movil <- function(df,ventana, k.alerta){
   return(resultado)
   
 }
+
+# ============================================================
+# EJERCICIO 2 - LEY DE BENFORD
+# ============================================================
+
+
+# ------------------------------------------------------------
+# Funcion: benford.mad
+# Recibe: x, vector numerico de montos.
+# Devuelve: MAD respecto a la distribucion de Benford.
+# ------------------------------------------------------------
+
+benford.mad <- function(x) {
+  
+  # 1. Conservar montos positivos y validos
+  x <- x[!is.na(x) & is.finite(x) & x > 0]
+  
+  if (length(x) == 0) {
+    return(NA_real_)
+  }
+  
+  # 2. Extraer el primer digito de cada monto
+  digito <- floor(x / (10 ^ floor(log10(x))))
+  
+  # 3. Frecuencia y proporcion observada de cada digito
+  frecuencia <- tabulate(digito, nbins = 9)
+  p.observada <- frecuencia / sum(frecuencia)
+  
+  # 4. Proporcion teorica de Benford
+  d <- 1:9
+  p.benford <- log10(1 + 1 / d)
+  
+  # 5. Calcular la desviacion absoluta media
+  mad <- mean(abs(p.observada - p.benford))
+  
+  return(mad)
+}
+
+
+# ------------------------------------------------------------
+# Funcion: benford.canton
+# Recibe:
+#   df: base de transacciones
+#   canal: canal que se desea analizar
+#   cantones: catalogo de codigos y nombres de cantones
+# Devuelve:
+#   Data frame con cod_canton, canton, n, mad y clase,
+#   ordenado de mayor a menor MAD.
+# ------------------------------------------------------------
+
+benford.canton <- function(df, canal, cantones) {
+  
+  resultado <- df |>
+    dplyr::filter(
+      .data$canal == .env$canal,
+      !is.na(.data$monto_crc),
+      is.finite(.data$monto_crc),
+      .data$monto_crc > 0
+    ) |>
+    dplyr::group_by(cod_canton) |>
+    dplyr::summarise(
+      n = dplyr::n(),
+      mad = benford.mad(monto_crc),
+      .groups = "drop"
+    ) |>
+    dplyr::left_join(
+      cantones |> dplyr::select(cod_canton, canton),
+      by = "cod_canton"
+    ) |>
+    dplyr::mutate(
+      clase = dplyr::case_when(
+        mad <= 0.006 ~ "Conformidad cercana",
+        mad <= 0.012 ~ "Conformidad aceptable",
+        mad <= 0.015 ~ "Conformidad marginal",
+        mad > 0.015 ~ "No conformidad"
+      )
+    ) |>
+    dplyr::select(cod_canton, canton, n, mad, clase) |>
+    dplyr::arrange(dplyr::desc(mad))
+  
+  return(resultado)
+}
+
