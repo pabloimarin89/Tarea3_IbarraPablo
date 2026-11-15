@@ -1,7 +1,9 @@
 ---
 title: "Tarea 3 - Herramientas de Ciencia de Datos I"
 author: "Pablo Ibarra Marin"
-format: html
+format:
+  html:
+    embed-resources: true
 execute:
   echo: true
   warning: false
