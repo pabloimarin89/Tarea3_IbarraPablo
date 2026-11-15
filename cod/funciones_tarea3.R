@@ -141,3 +141,72 @@ benford.canton <- function(df, canal, cantones) {
   return(resultado)
 }
 
+
+# ============================================================
+# EJERCICIO 3 - VALOR ACUMULADO CON INTERES
+# ============================================================
+
+# Funcion: valor.acumulado
+#
+# Recibe:
+# df: base de transacciones
+# tasa.anual: tasa efectiva anual
+# canal: canal de transacciones seleccionado
+#
+# Devuelve:
+# Lista con tabla, tasa.mensual, va e interes
+
+valor.acumulado <- function(df, tasa.anual, canal) {
+  
+  # 1. Seleccionar las transacciones del canal
+  datos.canal <- df |>
+    dplyr::filter(.data$canal == .env$canal)
+  
+  # 2. Extraer el mes de cada transaccion
+  datos.canal <- datos.canal |>
+    dplyr::mutate(
+      mes = as.integer(format(as.Date(fecha), "%m"))
+    )
+  
+  # 3. Sumar los montos de cada mes
+  resumen.mensual <- datos.canal |>
+    dplyr::group_by(mes) |>
+    dplyr::summarise(
+      monto = sum(monto_crc, na.rm = TRUE),
+      .groups = "drop"
+    )
+  
+  # 4. Crear una tabla con los 12 meses
+  tabla <- data.frame(mes = 1:12) |>
+    dplyr::left_join(resumen.mensual, by = "mes") |>
+    dplyr::mutate(
+      monto = dplyr::coalesce(monto, 0)
+    )
+  
+  # 5. Calcular la tasa efectiva mensual
+  tasa.mensual <- (1 + tasa.anual)^(1 / 12) - 1
+  
+  # 6. Calcular el factor de acumulacion
+  tabla <- tabla |>
+    dplyr::mutate(
+      factor = (1 + tasa.mensual)^(12 - mes)
+    )
+  
+  # 7. Calcular el valor acumulado
+  va <- sum(tabla$monto * tabla$factor)
+  
+  # 8. Calcular los intereses ganados
+  interes <- va - sum(tabla$monto)
+  
+  # 9. Devolver los resultados
+  return(
+    list(
+      tabla = tabla,
+      tasa.mensual = tasa.mensual,
+      va = va,
+      interes = interes
+    )
+  )
+}
+
+
