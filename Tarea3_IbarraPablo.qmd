@@ -365,3 +365,76 @@ knitr::kable(
 )
 
 ```
+
+```{r}
+#| label: grafico-ej3
+#| echo: false
+#| fig-width: 10
+#| fig-height: 5
+
+library(ggplot2)
+
+# 1. Preparar los datos para comparar ambos valores
+datos.grafico.ej3 <- data.frame(
+  mes = factor(
+    rep(tabla.ej3$mes, 2),
+    levels = 1:12,
+    labels = c(
+      "Ene", "Feb", "Mar", "Abr",
+      "May", "Jun", "Jul", "Ago",
+      "Set", "Oct", "Nov", "Dic"
+    )
+  ),
+  tipo = rep(
+    c("Deposito mensual", "Valor al 31-dic"),
+    each = 12
+  ),
+  valor = c(
+    tabla.ej3$monto,
+    tabla.ej3$valor.al.cierre
+  )
+)
+
+# 2. Construir el grafico de barras agrupadas
+grafico.ej3 <- ggplot(
+  datos.grafico.ej3,
+  aes(
+    x = mes,
+    y = valor / 1000000,
+    fill = tipo
+  )
+) +
+  
+  geom_col(
+    position = "dodge",
+    width = 0.75
+  ) +
+  
+  labs(
+    title = "Depositos mensuales y valor acumulado - 2025",
+    subtitle = paste(
+      "Canal:", canal.interes,
+      "| Tasa anual:", tasa.anual * 100, "%"
+    ),
+    x = "Mes",
+    y = "Millones de colones",
+    fill = "Concepto",
+    caption = "Valor acumulado al 31 de diciembre de 2025"
+  ) +
+  
+  theme_minimal()
+
+# 3. Guardar el grafico como PNG
+ggsave(
+  filename = "info/figuras/valor_acumulado_ej3.png",
+  plot = grafico.ej3,
+  width = 10,
+  height = 5,
+  dpi = 150
+)
+
+# 4. Mostrar el grafico en Quarto
+grafico.ej3
+
+
+```
