@@ -43,6 +43,16 @@ canal.benford <- parametros$valor[
   parametros$parametro == "canal.benford"
 ]
 
+# Extraer los parametros del ejercicio 3
+
+tasa.anual <- as.numeric(
+  parametros$valor[parametros$parametro == "tasa.anual"]
+)
+
+canal.interes <- parametros$valor[
+  parametros$parametro == "canal.interes"
+]
+
 ```
 
 ```{r}
@@ -114,6 +124,34 @@ cat("RESULTADO_2D =", resultado.2d, "\n")
 
 ```
 
+```{r}
+#| label: resultados-ej3
+#| include: false
+
+# Ejercicio 3 con parametros personalizados
+resultado.ej3 <- valor.acumulado(
+  df = datos,
+  tasa.anual = tasa.anual,
+  canal = canal.interes
+)
+
+# 3A: Valor acumulado al 31 de diciembre
+resultado.3a <- resultado.ej3$va
+
+# 3B: Intereses ganados
+resultado.3b <- resultado.ej3$interes
+
+# 3C: Valor acumulado con parametros comunes
+resultado.comun.ej3 <- valor.acumulado(
+  df = datos,
+  tasa.anual = 0.06,
+  canal = "App"
+)
+
+resultado.3c <- resultado.comun.ej3$va
+
+```
+
 ## Hoja de respuestas
 
 ```{r}
@@ -128,6 +166,10 @@ cat("RESULTADO_2A =", sprintf("%.4f", resultado.2a), "\n")
 cat("RESULTADO_2B =", resultado.2b, "\n")
 cat("RESULTADO_2C =", resultado.2c, "\n")
 cat("RESULTADO_2D =", resultado.2d, "\n")
+
+cat("RESULTADO_3A =", sprintf("%.2f", resultado.3a), "\n")
+cat("RESULTADO_3B =", sprintf("%.2f", resultado.3b), "\n")
+cat("RESULTADO_3C =", sprintf("%.2f", resultado.3c), "\n")
 
 ```
 
@@ -200,7 +242,6 @@ Se compara la distribución observada del primer dígito de los montos con la di
 ```
 
 ```{r}
-
 #| label: grafico-ej2
 #| echo: false
 #| fig-width: 9
@@ -293,3 +334,107 @@ grafico.ej2
 ```
 
 **Conclusión:** El canal Web presenta conformidad cercana con la ley de Benford (MAD = 0,0023). Los cantones con mayor MAD tienen relativamente pocas transacciones, por lo que las desviaciones podrían deberse a variabilidad muestral y no constituyen evidencia suficiente de fraude.
+
+## Ejercicio 3 - Valor acumulado con interés
+
+Se calcula el valor acumulado al 31 de diciembre de 2025 de los montos depositados al cierre de cada mes, aplicando una tasa efectiva mensual equivalente a la tasa anual seleccionada.
+
+### Tabla de depósitos y valores acumulados
+
+```{r}
+#| label: tabla-ej3
+#| echo: false
+
+# Calcular el valor al 31 de diciembre de cada deposito
+tabla.ej3 <- resultado.ej3$tabla |>
+  dplyr::mutate(
+    valor.al.cierre = monto * factor
+  )
+
+# Mostrar la tabla mensual
+knitr::kable(
+  tabla.ej3,
+  digits = c(0, 2, 6, 2),
+  col.names = c(
+    "Mes",
+    "Monto depositado (CRC)",
+    "Factor",
+    "Valor al 31-dic (CRC)"
+  ),
+  caption = "Depositos mensuales y valor acumulado al 31 de diciembre"
+)
+
+```
+
+```{r}
+#| label: grafico-ej3
+#| echo: false
+#| fig-width: 10
+#| fig-height: 5
+
+library(ggplot2)
+
+# 1. Preparar los datos para comparar ambos valores
+datos.grafico.ej3 <- data.frame(
+  mes = factor(
+    rep(tabla.ej3$mes, 2),
+    levels = 1:12,
+    labels = c(
+      "Ene", "Feb", "Mar", "Abr",
+      "May", "Jun", "Jul", "Ago",
+      "Set", "Oct", "Nov", "Dic"
+    )
+  ),
+  tipo = rep(
+    c("Deposito mensual", "Valor al 31-dic"),
+    each = 12
+  ),
+  valor = c(
+    tabla.ej3$monto,
+    tabla.ej3$valor.al.cierre
+  )
+)
+
+# 2. Construir el grafico de barras agrupadas
+grafico.ej3 <- ggplot(
+  datos.grafico.ej3,
+  aes(
+    x = mes,
+    y = valor / 1000000,
+    fill = tipo
+  )
+) +
+  
+  geom_col(
+    position = "dodge",
+    width = 0.75
+  ) +
+  
+  labs(
+    title = "Depositos mensuales y valor acumulado - 2025",
+    subtitle = paste(
+      "Canal:", canal.interes,
+      "| Tasa anual:", tasa.anual * 100, "%"
+    ),
+    x = "Mes",
+    y = "Millones de colones",
+    fill = "Concepto",
+    caption = "Valor acumulado al 31 de diciembre de 2025"
+  ) +
+  
+  theme_minimal()
+
+# 3. Guardar el grafico como PNG
+ggsave(
+  filename = "info/figuras/valor_acumulado_ej3.png",
+  plot = grafico.ej3,
+  width = 10,
+  height = 5,
+  dpi = 150
+)
+
+# 4. Mostrar el grafico en Quarto
+grafico.ej3
+
+
+```
